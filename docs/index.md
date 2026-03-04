@@ -1,1 +1,5 @@
-# 欢迎来到我的博客
+---
+layout: doc
+---
+
+<HomePage />
