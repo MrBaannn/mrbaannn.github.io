@@ -1,6 +1,6 @@
 export default {
   title: '般般的博客',
-  description: '般般的投资笔记',
+  description: '你好，我是般般 :-)',
   base: '/',
   head: [
     ['link', { rel: 'icon', href: '/images/tang.jpg' }],
