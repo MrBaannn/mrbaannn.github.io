@@ -92,6 +92,23 @@ function drawChart() {
     return
   }
 
+  if (data.length <= 1) {
+    ctx.fillStyle = COLORS.text
+    ctx.font = '14px "Noto Sans SC", sans-serif'
+    ctx.textAlign = 'center'
+    ctx.fillText('数据缺失', width / 2, height / 2)
+    return
+  }
+
+  const allSameNav = data.every(d => d.nav === data[0].nav)
+  if (allSameNav) {
+    ctx.fillStyle = COLORS.text
+    ctx.font = '14px "Noto Sans SC", sans-serif'
+    ctx.textAlign = 'center'
+    ctx.fillText('净值无变化', width / 2, height / 2)
+    return
+  }
+
   const padding = { top: 24, right: 24, bottom: 44, left: 64 }
   const chartW = width - padding.left - padding.right
   const chartH = height - padding.top - padding.bottom
