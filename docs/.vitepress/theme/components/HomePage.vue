@@ -157,6 +157,7 @@ onMounted(async () => {
   text-align: center;
   box-shadow: var(--shadow-sm);
   transition: box-shadow 0.3s ease;
+  max-height: 400px;
 }
 
 .profile-card:hover {
@@ -208,6 +209,8 @@ onMounted(async () => {
   transition: box-shadow 0.3s ease;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  max-height: 400px;
 }
 
 .chart-card:hover {
@@ -266,6 +269,11 @@ onMounted(async () => {
 
   .profile-chart-section {
     grid-template-columns: 1fr;
+  }
+
+  .profile-card,
+  .chart-card {
+    max-height: none;
   }
 
   .avatar-wrapper {

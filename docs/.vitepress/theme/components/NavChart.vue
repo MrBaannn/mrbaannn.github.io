@@ -7,7 +7,7 @@
       :style="{ left: tooltip.x + 'px', top: tooltip.y + 'px' }"
     >
       <div class="tooltip-date">{{ tooltip.date }}</div>
-      <div class="tooltip-nav">净值: {{ tooltip.nav }}</div>
+      <div class="tooltip-nav">{{ tooltip.pct }}</div>
     </div>
   </div>
 </template>
@@ -21,7 +21,7 @@ const props = defineProps({
 
 const canvas = ref(null)
 const chartWrapper = ref(null)
-const tooltip = ref({ show: false, x: 0, y: 0, date: '', nav: '' })
+const tooltip = ref({ show: false, x: 0, y: 0, date: '', pct: '' })
 
 let resizeObserver = null
 let pointPositions = []
@@ -34,6 +34,35 @@ const COLORS = {
   dot: '#5b8a72',
   dotHover: '#3a6a52',
   baseline: '#e0e4e8'
+}
+
+// Allowed base intervals for Y-axis
+const ALLOWED_BASES = [0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80]
+
+function pickInterval(range) {
+  // We want roughly 4-6 grid intervals to cover the range
+  const targetSteps = 5
+  const rawInterval = range / targetSteps
+  if (rawInterval <= 0) return 0.05
+
+  // Find the best allowed interval (base * 10^N, N >= 0)
+  let best = null
+  let bestDiff = Infinity
+  for (const base of ALLOWED_BASES) {
+    // Try multipliers: 1, 10, 100, 1000, ...
+    let multiplier = 1
+    for (let n = 0; n < 6; n++) {
+      const candidate = base * multiplier
+      const diff = Math.abs(candidate - rawInterval)
+      if (diff < bestDiff) {
+        bestDiff = diff
+        best = candidate
+      }
+      multiplier *= 10
+      if (candidate > range * 2) break
+    }
+  }
+  return best || 0.05
 }
 
 function drawChart() {
@@ -63,51 +92,58 @@ function drawChart() {
     return
   }
 
-  const padding = { top: 24, right: 24, bottom: 44, left: 56 }
+  const padding = { top: 24, right: 24, bottom: 44, left: 64 }
   const chartW = width - padding.left - padding.right
   const chartH = height - padding.top - padding.bottom
 
-  const navValues = data.map(d => d.nav)
-  let minNav = Math.min(...navValues)
-  let maxNav = Math.max(...navValues)
+  // Convert nav to percentage change from first point
+  const firstNav = data[0].nav
+  const pctValues = data.map(d => ((d.nav / firstNav) - 1) * 100)
 
-  // Add some padding to the range
-  const range = maxNav - minNav
-  if (range === 0) {
-    minNav -= 0.005
-    maxNav += 0.005
-  } else {
-    minNav -= range * 0.1
-    maxNav += range * 0.1
+  let minPct = Math.min(...pctValues)
+  let maxPct = Math.max(...pctValues)
+
+  // Pick a nice interval
+  const rawRange = maxPct - minPct
+  const interval = pickInterval(rawRange === 0 ? 0.1 : rawRange)
+
+  // Compute grid bounds: snap to interval boundaries
+  const gridMin = Math.floor(minPct / interval) * interval
+  const gridMax = Math.ceil(maxPct / interval) * interval
+
+  // Generate grid values
+  const gridValues = []
+  for (let v = gridMin; v <= gridMax + interval * 0.01; v += interval) {
+    gridValues.push(parseFloat(v.toFixed(6)))
   }
+
+  const yMin = gridValues[0]
+  const yMax = gridValues[gridValues.length - 1]
 
   // Helper: data to pixel
   const xScale = (i) => padding.left + (data.length === 1 ? chartW / 2 : (i / (data.length - 1)) * chartW)
-  const yScale = (v) => padding.top + chartH - ((v - minNav) / (maxNav - minNav)) * chartH
+  const yScale = (v) => padding.top + chartH - ((v - yMin) / (yMax - yMin)) * chartH
 
-  // Draw grid lines
-  const gridLines = 5
+  // Draw grid lines and Y-axis labels
   ctx.strokeStyle = COLORS.grid
   ctx.lineWidth = 1
   ctx.setLineDash([])
-  for (let i = 0; i <= gridLines; i++) {
-    const y = padding.top + (i / gridLines) * chartH
+  for (const val of gridValues) {
+    const y = yScale(val)
     ctx.beginPath()
     ctx.moveTo(padding.left, y)
     ctx.lineTo(width - padding.right, y)
     ctx.stroke()
 
-    // Y-axis labels
-    const val = maxNav - (i / gridLines) * (maxNav - minNav)
     ctx.fillStyle = COLORS.text
     ctx.font = '11px "Noto Sans SC", sans-serif'
     ctx.textAlign = 'right'
-    ctx.fillText(val.toFixed(4), padding.left - 8, y + 4)
+    ctx.fillText(val.toFixed(2) + '%', padding.left - 8, y + 4)
   }
 
-  // Draw baseline at 1.0 if in range
-  if (minNav <= 1.0 && maxNav >= 1.0) {
-    const baseY = yScale(1.0)
+  // Draw baseline at 0% if in range
+  if (yMin <= 0 && yMax >= 0) {
+    const baseY = yScale(0)
     ctx.strokeStyle = COLORS.baseline
     ctx.lineWidth = 1
     ctx.setLineDash([4, 4])
@@ -121,9 +157,9 @@ function drawChart() {
   // Draw area fill
   if (data.length > 1) {
     ctx.beginPath()
-    ctx.moveTo(xScale(0), yScale(data[0].nav))
+    ctx.moveTo(xScale(0), yScale(pctValues[0]))
     for (let i = 1; i < data.length; i++) {
-      ctx.lineTo(xScale(i), yScale(data[i].nav))
+      ctx.lineTo(xScale(i), yScale(pctValues[i]))
     }
     ctx.lineTo(xScale(data.length - 1), padding.top + chartH)
     ctx.lineTo(xScale(0), padding.top + chartH)
@@ -144,7 +180,7 @@ function drawChart() {
   ctx.beginPath()
   for (let i = 0; i < data.length; i++) {
     const x = xScale(i)
-    const y = yScale(data[i].nav)
+    const y = yScale(pctValues[i])
     if (i === 0) ctx.moveTo(x, y)
     else ctx.lineTo(x, y)
   }
@@ -154,8 +190,8 @@ function drawChart() {
   pointPositions = []
   for (let i = 0; i < data.length; i++) {
     const x = xScale(i)
-    const y = yScale(data[i].nav)
-    pointPositions.push({ x, y, date: data[i].date, nav: data[i].nav })
+    const y = yScale(pctValues[i])
+    pointPositions.push({ x, y, date: data[i].date, pct: pctValues[i] })
 
     ctx.beginPath()
     ctx.arc(x, y, 4, 0, Math.PI * 2)
@@ -174,7 +210,6 @@ function drawChart() {
   ctx.textAlign = 'center'
   for (let i = 0; i < data.length; i += step) {
     const x = xScale(i)
-    // Show MM-DD format
     const dateStr = data[i].date.substring(5)
     ctx.fillText(dateStr, x, height - padding.bottom + 20)
   }
@@ -202,12 +237,13 @@ function onMouseMove(e) {
   }
 
   if (closest) {
+    const sign = closest.pct >= 0 ? '+' : ''
     tooltip.value = {
       show: true,
       x: closest.x,
       y: closest.y - 50,
       date: closest.date,
-      nav: closest.nav.toFixed(6)
+      pct: sign + closest.pct.toFixed(2) + '%'
     }
   } else {
     tooltip.value.show = false
