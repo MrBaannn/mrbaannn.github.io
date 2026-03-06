@@ -30,10 +30,9 @@
 
     <!-- Holdings Section -->
     <section class="holdings-section">
-      <h3 class="section-title" style="text-align: center;">📊 当前持仓</h3>
-      <p class="holdings-date" v-if="latestDate">数据日期：{{ latestDate }}</p>
+      <h3 class="section-title" style="text-align: center;">📊 持仓分布</h3>
       <div class="pie-container">
-        <HoldingsPie :categories="latestCategories" />
+        <HoldingsPie :allData="allHoldingsData" />
       </div>
     </section>
 
@@ -50,8 +49,7 @@ import NavChart from './NavChart.vue'
 import HoldingsPie from './HoldingsPie.vue'
 
 const navData = ref([])
-const latestCategories = ref([])
-const latestDate = ref('')
+const allHoldingsData = ref([])
 
 // Parse YYMMDD filename to readable date
 function parseDate(filename) {
@@ -100,12 +98,8 @@ onMounted(async () => {
       nav: d.nav
     }))
 
-    // Use latest data for holdings
-    if (allData.length > 0) {
-      const latest = allData[allData.length - 1]
-      latestCategories.value = latest.categories
-      latestDate.value = latest.date
-    }
+    // Pass all holdings data (newest first for date selector)
+    allHoldingsData.value = allData.slice().reverse()
   } catch (e) {
     console.error('Failed to load portfolio data:', e)
   }
@@ -240,13 +234,6 @@ onMounted(async () => {
   padding: 32px;
   box-shadow: var(--shadow-sm);
   margin-bottom: 48px;
-}
-
-.holdings-date {
-  font-size: 0.8rem;
-  color: var(--color-text-muted);
-  margin: -12px 0 24px;
-  text-align: center;
 }
 
 .pie-container {

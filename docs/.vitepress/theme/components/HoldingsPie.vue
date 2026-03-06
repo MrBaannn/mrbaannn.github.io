@@ -1,5 +1,6 @@
 <template>
   <div class="holdings-pie" ref="pieWrapper">
+    <p class="holdings-date" v-if="selectedData">数据日期：{{ selectedData.date }}</p>
     <div class="pie-layout">
       <div class="pie-canvas-wrap">
         <canvas
@@ -21,6 +22,21 @@
           <span class="legend-dot" :style="{ background: categoryColors[i] }"></span>
           <span class="legend-name">{{ cat.name }}</span>
           <span class="legend-pct">{{ cat.ratio_pct.toFixed(2) }}%</span>
+        </div>
+      </div>
+      <!-- Date selector -->
+      <div class="date-selector" v-if="allData.length > 0">
+        <div class="date-selector-title">日期选择</div>
+        <div class="date-selector-list">
+          <div
+            v-for="(item, i) in allData"
+            :key="item.date"
+            class="date-selector-item"
+            :class="{ active: selectedIndex === i }"
+            @click="selectedIndex = i"
+          >
+            {{ item.date }}
+          </div>
         </div>
       </div>
     </div>
@@ -47,8 +63,10 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 
 const props = defineProps({
-  categories: { type: Array, default: () => [] }
+  allData: { type: Array, default: () => [] }
 })
+
+const selectedIndex = ref(0)
 
 const canvas = ref(null)
 const pieWrapper = ref(null)
@@ -71,8 +89,15 @@ const CATEGORY_COLOR_MAP = {
   '其它':     '#4a4a4a', // 黑色
 }
 
+const selectedData = computed(() => {
+  if (props.allData.length > 0 && selectedIndex.value < props.allData.length) {
+    return props.allData[selectedIndex.value]
+  }
+  return null
+})
+
 const validCategories = computed(() => {
-  return props.categories || []
+  return selectedData.value?.categories || []
 })
 
 const categoryColors = computed(() => {
@@ -271,9 +296,14 @@ onUnmounted(() => {
   if (resizeObserver) resizeObserver.disconnect()
 })
 
-watch(() => props.categories, () => {
+watch(() => props.allData, () => {
+  selectedIndex.value = 0
   nextTick(() => drawPie())
 }, { deep: true })
+
+watch(selectedIndex, () => {
+  nextTick(() => drawPie())
+})
 </script>
 
 <style scoped>
@@ -400,6 +430,58 @@ canvas {
   font-size: 0.78rem;
 }
 
+.holdings-date {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin: 0 0 16px;
+  text-align: center;
+}
+
+.date-selector {
+  min-width: 130px;
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+}
+
+.date-selector-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 8px;
+  padding: 0 6px;
+}
+
+.date-selector-list {
+  flex: 1;
+  max-height: 320px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.date-selector-item {
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.date-selector-item:hover {
+  background: var(--color-accent-light);
+}
+
+.date-selector-item.active {
+  background: var(--color-accent-light);
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
 @media (max-width: 768px) {
   .pie-layout {
     flex-direction: column;
@@ -416,6 +498,20 @@ canvas {
     flex-wrap: wrap;
     justify-content: center;
     min-width: auto;
+  }
+
+  .date-selector {
+    min-width: auto;
+    align-self: center;
+  }
+
+  .date-selector-list {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-height: none;
+    overflow-y: visible;
+    gap: 4px;
   }
 }
 </style>
