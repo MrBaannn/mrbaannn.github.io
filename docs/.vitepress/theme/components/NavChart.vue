@@ -27,12 +27,12 @@ let resizeObserver = null
 let pointPositions = []
 
 const COLORS = {
-  line: '#5b8a72',
-  lineLight: 'rgba(91, 138, 114, 0.08)',
+  line: '#4a9fd9',
+  lineLight: 'rgba(74, 159, 217, 0.08)',
   grid: '#f0f2f5',
   text: '#9ba8b5',
-  dot: '#5b8a72',
-  dotHover: '#3a6a52',
+  dot: '#4a9fd9',
+  dotHover: '#357ab8',
   baseline: '#e0e4e8'
 }
 
@@ -183,8 +183,8 @@ function drawChart() {
     ctx.closePath()
 
     const gradient = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartH)
-    gradient.addColorStop(0, 'rgba(91, 138, 114, 0.15)')
-    gradient.addColorStop(1, 'rgba(91, 138, 114, 0.01)')
+    gradient.addColorStop(0, 'rgba(74, 159, 217, 0.15)')
+    gradient.addColorStop(1, 'rgba(74, 159, 217, 0.01)')
     ctx.fillStyle = gradient
     ctx.fill()
   }
