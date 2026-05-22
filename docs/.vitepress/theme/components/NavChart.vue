@@ -219,21 +219,20 @@ function drawChart() {
     ctx.stroke()
   }
 
-  // X-axis labels (show at most ~8 labels to avoid crowding)
-  const maxLabels = Math.min(data.length, 8)
-  const step = Math.max(1, Math.floor(data.length / maxLabels))
+  // X-axis labels: show all when <= 7 points, otherwise first/last + two trisection points
+  let labelIndices
+  if (data.length <= 7) {
+    labelIndices = data.map((_, i) => i)
+  } else {
+    const last = data.length - 1
+    labelIndices = [0, Math.round(last / 3), Math.round(last * 2 / 3), last]
+  }
   ctx.fillStyle = COLORS.text
   ctx.font = '11px "Noto Sans SC", sans-serif'
   ctx.textAlign = 'center'
-  for (let i = 0; i < data.length; i += step) {
+  for (const i of labelIndices) {
     const x = xScale(i)
     const dateStr = data[i].date.substring(5)
-    ctx.fillText(dateStr, x, height - padding.bottom + 20)
-  }
-  // Always show last label
-  if ((data.length - 1) % step !== 0 && data.length > 1) {
-    const x = xScale(data.length - 1)
-    const dateStr = data[data.length - 1].date.substring(5)
     ctx.fillText(dateStr, x, height - padding.bottom + 20)
   }
 }
